@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(data) {
+      return data.ownerId == request.auth.uid;
+    }
+
+    function isProjectMember(projectId) {
+      return exists(/databases/$(database)/documents/projects/$(projectId)/members/$(request.auth.uid));
+    }
+
+    // Projects
+    match /projects/{projectId} {
+      // allow list for queries filtering by ownerId
+      allow list: if isSignedIn() && isOwner(resource.data);
+      
+      // allow get for owners and invited members
+      allow get: if isSignedIn() && (isOwner(resource.data) || isProjectMember(projectId));
+
+      allow create: if isSignedIn() && 
+                      request.resource.data.ownerId == request.auth.uid;
+                      
+      allow update: if isSignedIn() && isOwner(resource.data) && 
+                      request.resource.data.ownerId == resource.data.ownerId;
+                      
+      allow delete: if isSignedIn() && isOwner(resource.data);
+
+      // Members sub-collection
+      match /members/{memberId} {
+        allow read: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/projects/$(projectId)).data) || request.auth.uid == memberId);
+        allow write: if isSignedIn() && isOwner(get(/databases/$(database)/documents/projects/$(projectId)).data);
+      }
+
+      // Jobs sub-collection
+      match /jobs/{jobId} {
+        allow read: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/projects/$(projectId)).data) || isProjectMember(projectId));
+        allow write: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/projects/$(projectId)).data) || isProjectMember(projectId));
+
+        match /logs/{logId} {
+          allow read, write: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/projects/$(projectId)).data) || isProjectMember(projectId));
+        }
+      }
+
+      // Framework Files sub-collection
+      match /framework-files/{fileId} {
+        allow read, write: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/projects/$(projectId)).data) || isProjectMember(projectId));
+      }
+
+      // Stateless Services sub-collection
+      match /stateless-services/{serviceId} {
+        allow read, write: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/projects/$(projectId)).data) || isProjectMember(projectId));
+      }
+    }
+
+    // Allow collection group queries for project membership discovery
+    match /{path=**}/members/{memberId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+    
+    // User Profiles
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+  }
+}

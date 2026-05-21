@@ -1,0 +1,6 @@
+{
+  "name": "定时任务管理系统",
+  "description": "支持 crond 表达式，支持 http、shell、php 代码执行的定时任务管理系统。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
