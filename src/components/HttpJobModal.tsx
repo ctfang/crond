@@ -540,7 +540,7 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
         <div className="px-8 py-4 bg-[#252526] border-t border-[#333] flex items-center justify-between">
            <div className="flex items-center text-[10px] uppercase font-bold text-emerald-500/80">
               <CheckCircle2 className="w-4 h-4 mr-2" />
-              已就绪 (Ready to Deploy)
+              已就绪
            </div>
            <div className="flex space-x-3">
               <button 

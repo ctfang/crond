@@ -13,6 +13,13 @@ export const api = {
     await firebaseService.signInWithGoogle();
   },
 
+  loginWithQQ: async (): Promise<{token: string, username: string}> => {
+    // 模拟 QQ 登录，所有核心逻辑封装在此独立函数内，方便后续对接真正的 QQ OAuth2.0 API 或后端回调
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const randomQQ = Math.floor(100000000 + Math.random() * 900000000);
+    return { token: `qq_${randomQQ}`, username: `QQ用户_${randomQQ}` };
+  },
+
   getMe: async (): Promise<User> => {
     return new Promise((resolve, reject) => {
       onAuthStateChanged(auth, (user) => {

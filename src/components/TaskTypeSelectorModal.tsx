@@ -10,21 +10,21 @@ interface TaskTypeSelectorModalProps {
 const types: { id: JobType; title: string; desc: string; icon: any; color: string }[] = [
   { 
     id: 'php', 
-    title: 'PHP 脚本 (PHP Script)', 
+    title: 'PHP 脚本', 
     desc: '使用完整的 PHP 语法编写复杂的周期性业务逻辑。', 
     icon: Code2, 
     color: 'text-indigo-500 bg-indigo-50' 
   },
   { 
     id: 'shell', 
-    title: 'Shell 脚本 (Shell Script)', 
+    title: 'Shell 脚本', 
     desc: '执行系统指令、清理缓存或进行数据备份。', 
     icon: Terminal, 
     color: 'text-amber-500 bg-amber-50' 
   },
   { 
     id: 'http', 
-    title: 'HTTP 请求 (HTTP Request)', 
+    title: 'HTTP 请求', 
     desc: '对特定 URL 进行定时 GET 请求，触发 Webhook。', 
     icon: Globe, 
     color: 'text-blue-500 bg-blue-50' 
@@ -36,7 +36,7 @@ export default function TaskTypeSelectorModal({ onClose, onSelect }: TaskTypeSel
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-800">选择任务类型 (Select Task Type)</h2>
+          <h2 className="text-lg font-bold text-slate-800">选择任务类型</h2>
           <button 
             onClick={onClose} 
             className="p-1 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
@@ -69,7 +69,7 @@ export default function TaskTypeSelectorModal({ onClose, onSelect }: TaskTypeSel
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors"
           >
-            取消 (Cancel)
+            取消
           </button>
         </div>
       </div>

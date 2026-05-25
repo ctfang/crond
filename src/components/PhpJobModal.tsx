@@ -26,7 +26,7 @@ export default function PhpJobModal({ projectId, job, onClose, onSaved }: PhpJob
   );
   const [error, setError] = useState('');
   const [nextRun, setNextRun] = useState('');
-  const [terminalOutput, setTerminalOutput] = useState<string[]>(['[System] PHP Environment initialized.', '[System] Ready for scripting.']);
+  const [terminalOutput, setTerminalOutput] = useState<string[]>(['[系统] PHP 工作站仿真就绪。', '[系统] 脚本编辑就绪。']);
   const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
@@ -50,16 +50,16 @@ export default function PhpJobModal({ projectId, job, onClose, onSaved }: PhpJob
 
   const handleRun = () => {
     setIsRunning(true);
-    setTerminalOutput(prev => [...prev, `[${format(new Date(), 'HH:mm:ss')}] Manual trigger starting...`]);
+    setTerminalOutput(prev => [...prev, `[${format(new Date(), 'HH:mm:ss')}] 手动联调试运行启动...`]);
     
     setTimeout(() => {
       setTerminalOutput(prev => [
         ...prev, 
-        `[${format(new Date(), 'HH:mm:ss')}] Loading Framework Bootstrap (Project Config)...`,
-        `[System] PHP Environment initialized with framework.`,
-        `[${format(new Date(), 'HH:mm:ss')}] PHP task finished (245ms).`, 
-        '[STDOUT] PHP Crond task started...',
-        '[STDOUT] Task executed successfully.'
+        `[${format(new Date(), 'HH:mm:ss')}] 正在读取框架 Bootstrap 系统引导...`,
+        `[系统] 框架载荷完成，初始化 PHP 虚环境上下文。`,
+        `[${format(new Date(), 'HH:mm:ss')}] PHP 脚本安全执行完毕 (用时 245ms)。`, 
+        '[输出] PHP Crond task started...',
+        '[输出] 任务返回执行成功退出码 (Code 0)。'
       ]);
       setIsRunning(false);
     }, 1500);
@@ -87,7 +87,7 @@ export default function PhpJobModal({ projectId, job, onClose, onSaved }: PhpJob
           <div className="flex items-center space-x-3">
             <Code2 className="w-5 h-5 text-indigo-400" />
             <h2 className="text-sm font-bold text-slate-200 uppercase tracking-widest">
-              PHP 脚本任务 (PHP Script Task)
+              PHP 脚本任务
             </h2>
           </div>
           <div className="flex items-center space-x-3">
@@ -97,14 +97,14 @@ export default function PhpJobModal({ projectId, job, onClose, onSaved }: PhpJob
                 className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold rounded flex items-center transition-all"
              >
                 <Play className={`w-3.5 h-3.5 mr-2 ${isRunning ? 'animate-pulse' : ''}`} />
-                {isRunning ? '正在执行...' : '试运行 (Mock Run)'}
+                {isRunning ? '正在执行...' : '试运行'}
              </button>
              <button 
                 onClick={handleSubmit}
                 className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded flex items-center transition-all"
              >
                 <Save className="w-3.5 h-3.5 mr-2" />
-                保存 (Save)
+                保存
              </button>
              {job && (
                <button 
@@ -122,7 +122,7 @@ export default function PhpJobModal({ projectId, job, onClose, onSaved }: PhpJob
                   title="删除此任务"
                >
                   <Trash2 className="w-3.5 h-3.5 mr-2" />
-                  删除 (Delete)
+                  删除
                </button>
              )}
              <button onClick={onClose} className="p-2 text-slate-400 hover:text-white transition-colors">
@@ -134,7 +134,7 @@ export default function PhpJobModal({ projectId, job, onClose, onSaved }: PhpJob
         {/* Config Bar */}
         <div className="bg-[#252526] p-4 flex flex-wrap gap-6 items-end border-b border-[#333]">
            <div className="flex-1 min-w-[200px]">
-              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">任务名称 (Task Name)</label>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">任务名称</label>
               <input 
                 type="text"
                 className="w-full bg-[#1e1e1e] border border-[#3c3c3c] rounded px-3 py-2 text-sm text-slate-200 outline-none focus:border-indigo-500"
@@ -144,7 +144,7 @@ export default function PhpJobModal({ projectId, job, onClose, onSaved }: PhpJob
               />
            </div>
            <div className="w-48">
-              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">Cron 表达式 (Cron Exp)</label>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">Cron 表达式</label>
               <input 
                 type="text"
                 className="w-full bg-[#1e1e1e] border border-[#3c3c3c] font-mono rounded px-3 py-2 text-sm text-emerald-400 outline-none focus:border-indigo-500"
@@ -154,7 +154,7 @@ export default function PhpJobModal({ projectId, job, onClose, onSaved }: PhpJob
               />
            </div>
            <div className="w-40 text-right">
-              <div className="text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">预计下次执行 (Next)</div>
+              <div className="text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">预计下次执行时间</div>
               <div className="text-[11px] text-slate-400 font-mono truncate">{nextRun}</div>
            </div>
         </div>
@@ -189,9 +189,9 @@ export default function PhpJobModal({ projectId, job, onClose, onSaved }: PhpJob
               <div className="h-8 bg-[#252526] px-4 flex items-center justify-between border-b border-[#333]">
                  <div className="text-[10px] font-bold text-white uppercase tracking-widest flex items-center">
                     <TerminalIcon className="w-3 h-3 mr-2 text-indigo-400" />
-                    模拟 PHP 输出 (Runtime Console)
+                    模拟 PHP 控制台输出
                  </div>
-                 <button onClick={() => setTerminalOutput(['[System] Logs cleared.'])} className="hover:text-white text-slate-500">
+                 <button onClick={() => setTerminalOutput(['[系统] 控制台日志已清空。'])} className="hover:text-white text-slate-500">
                     <Trash2 className="w-3 h-3" />
                  </button>
               </div>
@@ -217,10 +217,10 @@ export default function PhpJobModal({ projectId, job, onClose, onSaved }: PhpJob
         {/* Footer */}
         <div className="h-6 bg-indigo-900 text-white flex items-center px-4 justify-between shrink-0 text-[10px] font-bold tracking-wider uppercase">
            <div className="flex items-center space-x-4">
-              <span className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-1.5 text-emerald-400" /> PHP 8.3-ZTS Worker Node</span>
-              <span>Memory: 256MB</span>
+              <span className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-1.5 text-emerald-400" /> PHP 8.3-ZTS 工作节点</span>
+              <span>内存限额: 256MB</span>
            </div>
-           <div>Cloud Native Cron Service</div>
+           <div>云原生 Crond 自动化调度平台</div>
         </div>
       </div>
     </div>

@@ -25,7 +25,7 @@ export default function ShellJobModal({ projectId, job, onClose, onSaved }: Shel
   );
   const [error, setError] = useState('');
   const [nextRun, setNextRun] = useState('');
-  const [terminalOutput, setTerminalOutput] = useState<string[]>(['[System] Shell Environment ready.', '[System] Bash session started.']);
+  const [terminalOutput, setTerminalOutput] = useState<string[]>(['[系统] Shell 仿真终端环境就绪。', '[系统] Bash 安全会话已建立。']);
   const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
@@ -41,10 +41,10 @@ export default function ShellJobModal({ projectId, job, onClose, onSaved }: Shel
 
   const handleRun = () => {
     setIsRunning(true);
-    setTerminalOutput(prev => [...prev, `[Bash] ${new Date().toLocaleTimeString()} Running script...`]);
+    setTerminalOutput(prev => [...prev, `[Bash] ${new Date().toLocaleTimeString()} 正在安全运行脚本...`]);
     
     setTimeout(() => {
-      setTerminalOutput(prev => [...prev, '[Output] Success: Shell commands finished.', '[Process] Exit code 0']);
+      setTerminalOutput(prev => [...prev, '[输出] 执行成功: 所有 Shell 批处理指令完成。', '[进程] 进程正常退出，退出返回码 (Code 0)']);
       setIsRunning(false);
     }, 1000);
   };
@@ -71,7 +71,7 @@ export default function ShellJobModal({ projectId, job, onClose, onSaved }: Shel
           <div className="flex items-center space-x-3">
             <Terminal className="w-5 h-5 text-amber-400" />
             <h2 className="text-sm font-bold text-slate-200 uppercase tracking-widest">
-              Shell 脚本任务 (Shell Script Task)
+              Shell 脚本任务
             </h2>
           </div>
           <div className="flex items-center space-x-3">
@@ -81,14 +81,14 @@ export default function ShellJobModal({ projectId, job, onClose, onSaved }: Shel
                 className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold rounded flex items-center transition-all"
              >
                 <Play className={`w-3.5 h-3.5 mr-2 ${isRunning ? 'animate-pulse' : ''}`} />
-                {isRunning ? '正在执行...' : '试运行 (Mock Run)'}
+                {isRunning ? '正在执行...' : '试运行'}
              </button>
              <button 
                 onClick={handleSubmit}
                 className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded flex items-center transition-all"
              >
                 <Save className="w-3.5 h-3.5 mr-2" />
-                保存 (Save)
+                保存
              </button>
              {job && (
                <button 
@@ -106,7 +106,7 @@ export default function ShellJobModal({ projectId, job, onClose, onSaved }: Shel
                   title="删除此任务"
                >
                   <Trash2 className="w-3.5 h-3.5 mr-2" />
-                  删除 (Delete)
+                  删除
                </button>
              )}
              <button onClick={onClose} className="p-2 text-slate-400 hover:text-white transition-colors">
@@ -138,7 +138,7 @@ export default function ShellJobModal({ projectId, job, onClose, onSaved }: Shel
               />
            </div>
            <div className="w-40 text-right text-slate-400 text-xs font-mono">
-              Next: {nextRun}
+              下次预期执行时间: {nextRun}
            </div>
         </div>
 
@@ -168,7 +168,7 @@ export default function ShellJobModal({ projectId, job, onClose, onSaved }: Shel
            <div className="h-7 bg-[#252526] px-4 flex items-center justify-between border-b border-[#333]">
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center">
                  <TerminalIcon className="w-3 h-3 mr-2" />
-                 BASH CONSOLE
+                 BASH 模拟控制台
               </div>
               <button onClick={() => setTerminalOutput([])} className="hover:text-white text-slate-600">
                  <Trash2 className="w-3 h-3" />
