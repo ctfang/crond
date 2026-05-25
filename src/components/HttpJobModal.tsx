@@ -62,12 +62,12 @@ export async function executeHttpSimulation(
 
   // 简单 URL 协议校验
   if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
-    throw new Error('无效的目标协议，请检查。URL 必须以 http:// 或 https:// 开头。');
+    throw new Error('无效的目标协议，URL 必须以 http:// 或 https:// 开头。');
   }
 
   // 准备响应数据
   let responseData: any = {
-    message: "HTTP 定时任务模拟请求成功 (Simulated http trigger success)",
+    message: "HTTP 定时任务模拟请求成功",
     timestamp: new Date().toISOString(),
     requestDetails: {
       method,
@@ -93,21 +93,21 @@ export async function executeHttpSimulation(
     status = 500;
     statusText = "Internal Server Error";
     responseData = { 
-      error: "服务器内部异常 (Server Error)", 
+      error: "服务器内部异常", 
       details: "Simulated host response status code 500 from endpoint." 
     };
   } else if (lowerUrl.includes('auth') && !headers['Authorization'] && !headers['authorization']) {
     status = 401;
     statusText = "Unauthorized";
     responseData = { 
-      error: "未授权的访问 (Unauthorized)", 
+      error: "未授权的访问", 
       details: "请求头中缺少授权凭据 (Missing 'Authorization' in headers)" 
     };
   } else if (lowerUrl.includes('notfound') || lowerUrl.includes('404')) {
     status = 404;
     statusText = "Not Found";
     responseData = {
-      error: "接口未找到 (Not Found)",
+      error: "接口未找到",
       details: "Simulated resource not found on remote worker host."
     };
   }
@@ -235,7 +235,7 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
         statusText: 'Error',
         headers: { 'content-type': 'text/plain' },
         data: null,
-        error: e.message || '网络请求异常失败 (Simulation Error/Invalid Protocol)',
+        error: e.message || '网络请求异常失败 (模拟异常或非法协议)',
         timeMs: duration
       });
     } finally {
@@ -269,7 +269,7 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
           <div className="flex items-center space-x-3">
             <Globe className="w-5 h-5 text-indigo-400 animate-pulse" />
             <h2 className="text-sm font-bold text-slate-200 uppercase tracking-widest font-sans">
-              HTTP 请求任务 (HTTP Request Task)
+              HTTP 网络请求任务
             </h2>
           </div>
           <div className="flex items-center space-x-3 text-slate-400">
@@ -289,17 +289,17 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
 
            <div className="grid grid-cols-2 gap-6">
               <div>
-                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">任务名称 (Task Name)</label>
+                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">任务名称</label>
                  <input 
                    type="text"
                    className="w-full bg-[#151515] border border-[#3c3c3c] rounded-lg px-4 py-2 text-slate-200 text-xs outline-none focus:border-indigo-500"
-                   placeholder="例如: Webhook 触发器"
+                   placeholder="例如: Webhook 同步数据触发器"
                    value={formData.name || ''}
                    onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
                  />
               </div>
               <div>
-                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">Cron 表达式 (Cron Exp)</label>
+                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">Cron 表达式</label>
                  <input 
                    type="text"
                    className="w-full bg-[#151515] border border-[#3c3c3c] font-mono rounded-lg px-4 py-2 text-emerald-400 text-xs outline-none focus:border-indigo-500"
@@ -322,21 +322,21 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
                    onClick={() => setActiveTab('url')}
                    className={`px-4 py-1.5 text-xs font-semibold rounded-t-lg border-b-2 transition-all ${activeTab === 'url' ? 'border-indigo-500 text-white' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
                  >
-                   常规设置 (URL & Method)
+                   常规设置
                  </button>
                  <button 
                    type="button"
                    onClick={() => setActiveTab('headers')}
                    className={`px-4 py-1.5 text-xs font-semibold rounded-t-lg border-b-2 transition-all ${activeTab === 'headers' ? 'border-indigo-500 text-white' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
                  >
-                   请求头标头 (Headers)
+                   请求头 (Headers)
                  </button>
                  <button 
                    type="button"
                    onClick={() => setActiveTab('body')}
                    className={`px-4 py-1.5 text-xs font-semibold rounded-t-lg border-b-2 transition-all ${activeTab === 'body' ? 'border-indigo-500 text-white' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
                  >
-                   请求主体内容 (Body)
+                   请求体 (Body)
                  </button>
               </div>
 
@@ -344,7 +344,7 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
                 <div className="space-y-4 animate-in fade-in duration-200">
                   <div className="grid grid-cols-6 gap-4">
                      <div className="col-span-2">
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">请求方式 (Method)</label>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">请求方式</label>
                         <select 
                           className="w-full bg-[#151515] border border-[#3c3c3c] text-indigo-400 text-xs rounded-lg px-3 py-2 outline-none focus:border-indigo-500 font-mono"
                           value={method}
@@ -358,7 +358,7 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
                         </select>
                      </div>
                      <div className="col-span-4">
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">目标 URL (Target URL)</label>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">目标链接 (URL)</label>
                         <input 
                           type="url"
                           className="w-full bg-[#151515] border border-[#3c3c3c] font-mono text-indigo-400 text-xs rounded-lg px-4 py-2 outline-none focus:border-indigo-500"
@@ -369,7 +369,7 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
                      </div>
                   </div>
                   <p className="text-[10px] text-slate-500">
-                    * 支持标准的万维网 HTTP / HTTPS 外部服务器，系统将按指定的 Method 方式及 Cron 频率调用此接口。
+                    * 支持标准的 HTTP / HTTPS 外部服务器，系统将按指定的请求方式及 Cron 频率调用此接口。
                   </p>
                 </div>
               )}
@@ -377,13 +377,13 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
               {activeTab === 'headers' && (
                 <div className="space-y-4 animate-in fade-in duration-200">
                    <div className="flex items-center justify-between">
-                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-sans">自定义标头 (Custom HTTP Headers)</span>
+                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-sans">自定义请求头</span>
                      <button 
                        type="button"
                        onClick={handleAddHeader}
                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-300 font-bold rounded flex items-center gap-1 transition-all"
                      >
-                       <Plus className="w-3 h-3" /> 添加标头 (Add Header)
+                       <Plus className="w-3 h-3" /> 添加标头
                      </button>
                    </div>
 
@@ -392,14 +392,14 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
                        <div key={index} className="flex gap-2 items-center">
                          <input 
                            type="text"
-                           placeholder="Header 名称 (e.g. Content-Type)"
+                           placeholder="标头名称 (例如 Content-Type)"
                            className="flex-1 bg-[#151515] border border-[#3c3c3c] font-mono text-slate-300 text-xs rounded px-3 py-1.5 outline-none focus:border-indigo-500"
                            value={row.key}
                            onChange={e => handleHeaderChange(index, 'key', e.target.value)}
                          />
                          <input 
                            type="text"
-                           placeholder="Header 的值 (e.g. application/json)"
+                           placeholder="标头的值 (例如 application/json)"
                            className="flex-1 bg-[#151515] border border-[#3c3c3c] font-mono text-slate-300 text-xs rounded px-3 py-1.5 outline-none focus:border-indigo-500"
                            value={row.value}
                            onChange={e => handleHeaderChange(index, 'value', e.target.value)}
@@ -421,10 +421,10 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
                 <div className="space-y-4 animate-in fade-in duration-200">
                    <div>
                      <div className="flex items-center justify-between mb-2">
-                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-sans">请求内容结构体 (Body Payload)</label>
+                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-sans">请求体正文 (Body Payload)</label>
                        {(method === 'GET' || method === 'DELETE') && (
                          <span className="text-[10px] text-amber-500">
-                           ⚠️ 警告: {method} 请求规范中不建议携带 Body
+                           ⚠️ 警告: {method} 请求规范中不建议携带 Body 请求正文
                          </span>
                        )}
                      </div>
@@ -449,7 +449,7 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
                     {isRunning && (
                       <span className="flex items-center space-x-1.5 text-[10px] text-indigo-400">
                         <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping"></span>
-                        <span className="animate-pulse">正在发送请求 (Requesting)...</span>
+                        <span className="animate-pulse">正在传输载荷并等待服务返回数据...</span>
                       </span>
                     )}
                  </div>
@@ -461,10 +461,10 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
                             ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/30' 
                             : 'bg-red-950/80 text-red-400 border border-red-500/30'
                        }`}>
-                          Status: {httpResponse.status} {httpResponse.statusText}
+                          状态码: {httpResponse.status} {httpResponse.statusText}
                        </span>
                        <span className="text-[10px] text-slate-400 font-mono">
-                          Time: {httpResponse.timeMs} ms
+                          耗时: {httpResponse.timeMs} 毫秒 (ms)
                        </span>
                     </div>
                  )}
@@ -495,7 +495,7 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
                        {respTab === 'body' ? (
                           httpResponse.error ? (
                              <div className="text-red-400 whitespace-pre-wrap leading-relaxed py-1">
-                                [Error] 请求执行失败:
+                                [错误] 请求执行失败:
                                 <br />
                                 {httpResponse.error}
                              </div>
@@ -509,7 +509,7 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
                        ) : (
                           <div className="space-y-1.5 py-1">
                              {Object.entries(httpResponse.headers).map(([k, v]) => (
-                                <div key={k} className="flex justify-between border-b border-slate-950 pb-1.5">
+                                <div key={k} className="flex justify-between border-b border-slate-950 pb-1.5 text-xs">
                                    <span className="text-indigo-300">{k}:</span>
                                    <span className="text-slate-400 select-all">{v}</span>
                                 </div>
@@ -523,12 +523,12 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
                     {isRunning ? (
                       <div className="flex flex-col items-center space-y-3">
                          <div className="w-6 h-6 rounded-full border-2 border-indigo-500/25 border-t-indigo-500 animate-spin"></div>
-                         <div className="text-xs text-indigo-400 font-mono animate-pulse">正在传输网络载荷并等待响应数据...</div>
+                         <div className="text-xs text-indigo-400 font-mono animate-pulse">正在进行联调联试，已提交模拟网络请求...</div>
                       </div>
                     ) : (
-                      <div className="space-y-1 select-none">
-                         <p className="text-xs font-medium text-slate-400">目前暂无请求返回值</p>
-                         <p className="text-[10px] text-slate-600 font-sans">点击下方右侧的 &ldquo;立即测试&rdquo; 按钮即可模拟发起标准的 HTTP/HTTPS 网络请求对指定接口进行联调联试</p>
+                      <div className="space-y-1.5 select-none">
+                         <p className="text-xs font-medium text-slate-400">目前暂无网路响应返回值数据</p>
+                         <p className="text-[10px] text-slate-600 font-sans max-w-md">点击右下方的 &ldquo;立即测试&rdquo; 按钮，即可由内置微处理器模拟派发真实 HTTP/HTTPS 网络封包，将目标服务端响应结果格式化在此显示。</p>
                       </div>
                     )}
                  </div>
@@ -548,19 +548,19 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
                 disabled={isRunning}
                 className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded-lg transition-all"
               >
-                 {isRunning ? '正在发起...' : '立即测试 (Test Now)'}
+                 {isRunning ? '正在发起...' : '立即测试'}
               </button>
               <button 
                 type="button"
                 onClick={handleSubmit}
                 className="px-8 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow-lg shadow-indigo-900/20 transition-all font-bold"
               >
-                 保存任务 (Save Job)
+                 保存任务
               </button>
               {job && (
                 <button 
                   onClick={async () => {
-                     if (confirm('确认删除此定时任务？')) {
+                     if (confirm('确认删除此定时任务吗？')) {
                         try {
                            await api.deleteJob(job.id, projectId);
                            onSaved();
@@ -572,7 +572,7 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
                   className="px-6 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-lg transition-all"
                   title="删除任务"
                 >
-                   删除任务 (Delete)
+                   删除任务
                 </button>
               )}
            </div>
