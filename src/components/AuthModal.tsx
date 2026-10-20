@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
 import { api } from '../services/api';
-import { Lock, MessageCircle } from 'lucide-react';
+import { Lock, FlaskConical } from 'lucide-react';
 
 export const AuthModal: React.FC<{ onLogin: (uname: string) => void }> = ({ onLogin }) => {
-  const [error, setError] = useState('');
+  const [error, setError] = useState(() => {
+    const url = new URL(window.location.href);
+    const message = url.searchParams.get('authError') || '';
+    if (message) { url.searchParams.delete('authError'); window.history.replaceState(null, '', url); }
+    return message;
+  });
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [loadingQQ, setLoadingQQ] = useState(false);
+  const [loadingTest, setLoadingTest] = useState(false);
 
   const handleGoogleSignIn = async () => {
     setError('');
@@ -33,7 +39,20 @@ export const AuthModal: React.FC<{ onLogin: (uname: string) => void }> = ({ onLo
     }
   };
 
-  const isLoading = loadingGoogle || loadingQQ;
+  const handleTestSignIn = async () => {
+    setError('');
+    setLoadingTest(true);
+    try {
+      const { username } = await api.loginWithTestAccount();
+      onLogin(username);
+    } catch (err: any) {
+      setError(err.message || '测试账号登录失败，请重试');
+    } finally {
+      setLoadingTest(false);
+    }
+  };
+
+  const isLoading = loadingGoogle || loadingQQ || loadingTest;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4 font-sans">
@@ -98,10 +117,22 @@ export const AuthModal: React.FC<{ onLogin: (uname: string) => void }> = ({ onLo
             </span>
           </button>
 
+          <div className="pt-4 border-t border-slate-100 space-y-2">
+            <button
+              onClick={handleTestSignIn}
+              disabled={isLoading}
+              className="w-full flex items-center justify-center space-x-3 py-3 px-4 border border-indigo-100 rounded-xl shadow-sm text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all disabled:opacity-50 cursor-pointer"
+            >
+              <FlaskConical className="w-5 h-5 shrink-0" />
+              <span>{loadingTest ? '正在进入测试账号...' : '测试账号一键登录'}</span>
+            </button>
+            <p className="text-center text-[10px] text-slate-400">无需注册，使用后台测试账号体验完整功能</p>
+          </div>
+
           <p className="mt-6 text-center text-[10px] text-slate-400 font-medium leading-relaxed font-sans">
             登录即代表您同意我们的 服务条款 与 隐私政策
             <br />
-            安全多用户配置基于高级 Firebase 实例加密
+            项目数据由 Go 后台保存
           </p>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from './services/api';
 import { Job, Project, JobType } from './types';
 import PhpJobModal from './components/PhpJobModal';
@@ -23,12 +23,15 @@ export default function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const selectedProjectRef = useRef(selectedProjectId);
+  selectedProjectRef.current = selectedProjectId;
   const [loading, setLoading] = useState(true);
-  
+
   // Modals state
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [showJobModal, setShowJobModal] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [showLogsJobId, setShowLogsJobId] = useState<string | undefined>(undefined);
   const [showLogsModal, setShowLogsModal] = useState(false);
@@ -68,22 +71,21 @@ export default function App() {
     try {
       let data = await api.getProjects();
       if (data.length === 0) {
-        const proj = await api.createProject('默认系统', 'crond');
-        data = [proj];
+        setShowProjectModal(true);
       }
       setProjects(data);
       if (data.length > 0) {
         setSelectedProjectId(data[0].id);
       }
     } catch (err) {
-      console.error('Failed to fetch projects', err);
+      setErrorMsg(err instanceof Error ? err.message : '项目加载失败');
     }
   };
 
-  const createProject = async (name: string, type: 'crond') => {
+  const createProject = async (name: string, type: 'crond', slug: string) => {
      try {
         setErrorMsg('');
-        const proj = await api.createProject(name, type);
+        const proj = await api.createProject(name, type, slug);
         setProjects(prev => [proj, ...prev]);
         setSelectedProjectId(proj.id);
         setShowProjectModal(false);
@@ -91,7 +93,7 @@ export default function App() {
         throw new Error(err.message || '创建项目失败');
      }
   };
-  
+
   const deleteProject = async (id: string, e: React.MouseEvent) => {
      e.stopPropagation();
      if (!confirm('确认删除此项目及其下所有任务？(Confirm deleting this project and its tasks?)')) return;
@@ -123,11 +125,11 @@ export default function App() {
     setLoading(true);
     try {
       const data = await api.getJobs(projectId);
-      setJobs(data);
+      if (selectedProjectRef.current === projectId) setJobs(data);
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (selectedProjectRef.current === projectId) setLoading(false);
     }
   };
 
@@ -143,19 +145,29 @@ export default function App() {
   const handleDelete = async (id: string) => {
     if (!selectedProjectId) return;
     if (confirm('确认删除此任务？')) {
-      await api.deleteJob(id, selectedProjectId);
-      fetchJobs(selectedProjectId);
+      try {
+        await api.deleteJob(id, selectedProjectId);
+        fetchJobs(selectedProjectId);
+      } catch (err: any) { setErrorMsg(err.message || '删除任务失败'); }
     }
   };
 
   const handleRun = async (id: string) => {
     if (!selectedProjectId) return;
     try {
-        await api.runJob(id, selectedProjectId);
-        alert('执行指令已发送');
+        const result = await api.runJob(id, selectedProjectId);
+        alert(result.status === 'success' ? '执行成功，可查看任务日志' : '执行失败：' + result.output);
     } catch (e: any) {
         alert(e.message || '执行失败');
     }
+  };
+
+  const handleToggle = async (job: Job) => {
+    try {
+      const updated = await api.updateJob(job.id, { projectId: job.projectId,
+        status: job.status === 'active' ? 'inactive' : 'active' });
+      setJobs(prev => prev.map(item => item.id === updated.id ? updated : item));
+    } catch (err: any) { setErrorMsg(err.message || '更新状态失败'); }
   };
 
   const handleOpenJobModal = (job: Job | null = null) => {
@@ -163,7 +175,7 @@ export default function App() {
        alert("请先选择或创建一个项目 (Please select or create a project first)");
        return;
     }
-    
+
     if (job) {
        // Edit mode
        setEditingJob(job);
@@ -176,14 +188,16 @@ export default function App() {
 
   const handleTypeSelected = (type: JobType) => {
     setShowTypeSelector(false);
+    const project = projects.find(p => p.id === selectedProjectId);
+    const useStarter = Boolean(project?.framework);
     // Create a skeleton job with the selected type
     const skeleton: Partial<Job> = {
       type,
       name: '',
       status: 'active',
       cronExp: '* * * * *',
-      content: type === 'php' ? '<?php\n\nfunction main()\n{\n    echo "PHP Crond task started...\\n";\n    // Your logic here\n}\n\nmain();' : 
-               type === 'shell' ? '#!/bin/bash\n\necho "Shell task running..."' : 
+      content: type === 'php' && useStarter ? '<?php\n\nuse Framework\\Task;\nuse Framework\\Logger;\nuse Framework\\Config;\nuse Framework\\Database;\n\nTask::run("my_task", function () {\n    Logger::info("Hello from task", ["app" => Config::get("app.name")]);\n    // 在此编写任务逻辑；需要持久化数据时使用 Database::collection()\n});' : type === 'php' ? '<?php\n\nfunction main()\n{\n    echo "PHP Crond task started...\\n";\n    // Your logic here\n}\n\nmain();' :
+               type === 'shell' ? '#!/bin/bash\n\necho "Shell task running..."' :
                'https://',
     };
     setEditingJob(skeleton as Job);
@@ -208,7 +222,7 @@ export default function App() {
               </div>
               <span className="text-white font-bold text-lg tracking-tight truncate">Crond PHP System</span>
             </div>
-            <button 
+            <button
               onClick={() => setIsSidebarCollapsed(true)}
               className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded transition-colors ml-2 shrink-0"
               title="收起侧边栏"
@@ -221,7 +235,7 @@ export default function App() {
             <div className="w-8 h-8 bg-indigo-500 rounded flex items-center justify-center shrink-0 cursor-pointer" title="Crond PHP System" onClick={() => setIsSidebarCollapsed(false)}>
               <Clock className="w-5 h-5 text-white" />
             </div>
-            <button 
+            <button
               onClick={() => setIsSidebarCollapsed(false)}
               className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded transition-colors"
               title="展开侧边栏"
@@ -230,7 +244,7 @@ export default function App() {
             </button>
           </div>
         )}
-        
+
         {/* Navigation Items - 平级设计 */}
         <div className="flex-1 px-4 space-y-2 mt-4 overflow-y-auto">
           {!isSidebarCollapsed && (
@@ -238,7 +252,7 @@ export default function App() {
               管理模块 (MODULES)
             </div>
           )}
-          
+
           {/* 定时器 (Crond Jobs) */}
           <button
             onClick={() => setActiveTab('jobs')}
@@ -285,7 +299,7 @@ export default function App() {
             )}
           </button>
 
-          {/* 框架配置 */}
+          {/* 框架文档 */}
           <button
             onClick={() => setActiveTab('framework')}
             className={`w-full flex items-center rounded-xl transition-all text-left ${
@@ -295,14 +309,14 @@ export default function App() {
                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/30'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
             }`}
-            title="框架配置"
+            title="框架文档"
           >
             <Box className={`w-5 h-5 shrink-0 ${activeTab === 'framework' ? 'text-white' : 'text-slate-500'}`} />
             {!isSidebarCollapsed && (
               <div className="flex flex-col truncate">
-                <span className="text-sm font-bold tracking-wide">框架配置</span>
+                <span className="text-sm font-bold tracking-wide">框架文档</span>
                 <span className={`text-[9.5px] font-semibold mt-0.5 ${activeTab === 'framework' ? 'text-indigo-200' : 'text-slate-600'}`}>
-                  运行环境 & 入口维护
+                  全局默认框架 · 只读文档
                 </span>
               </div>
             )}
@@ -362,31 +376,40 @@ export default function App() {
 
       {/* Main Content Container */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
+        <div className="h-14 px-4 bg-white border-b border-slate-200 flex items-center gap-2 shrink-0 overflow-x-auto scrollbar-hide">
+          <label className="shrink-0 text-xs text-slate-500 flex items-center gap-2">当前项目
+            <select aria-label="当前项目" value={selectedProjectId || ''}
+              onChange={e => { setSelectedProjectId(e.target.value || null); setShowLogsModal(false); setShowMembersModal(false); setShowJobModal(false); }}
+              className="h-8 border border-slate-200 rounded-md px-2 min-w-32 max-w-44 bg-white text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+              {!projects.length && <option value="">暂无项目</option>}
+              {projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}
+            </select>
+          </label>
+          <button onClick={() => setShowProjectModal(true)} title="新建项目" aria-label="新建项目" className="h-8 px-2.5 shrink-0 inline-flex items-center gap-1.5 text-xs text-indigo-600 rounded-md hover:bg-indigo-50"><Plus className="w-3.5 h-3.5" />新建</button>
+          <button disabled={!selectedProjectId} onClick={() => setEditingProject(projects.find(p => p.id === selectedProjectId) || null)} title="编辑项目" aria-label="编辑项目" className="h-8 px-2.5 shrink-0 inline-flex items-center gap-1.5 text-xs text-slate-600 rounded-md hover:bg-slate-100 disabled:opacity-50"><Edit className="w-3.5 h-3.5" />编辑</button>
+          <button disabled={!selectedProjectId} onClick={() => { setShowLogsJobId(undefined); setShowLogsModal(true); }} title="项目日志" aria-label="项目日志" className="h-8 px-2.5 shrink-0 inline-flex items-center gap-1.5 text-xs text-slate-600 rounded-md hover:bg-slate-100 disabled:opacity-50"><FileText className="w-3.5 h-3.5" />日志</button>
+          <button disabled={!selectedProjectId} onClick={e => selectedProjectId && deleteProject(selectedProjectId, e)} title="删除项目" aria-label="删除项目" className="h-8 px-2.5 shrink-0 inline-flex items-center gap-1.5 text-xs text-rose-500 rounded-md hover:bg-rose-50 disabled:opacity-50"><Trash2 className="w-3.5 h-3.5" />删除</button>
+        </div>
         {errorMsg && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-rose-100 border border-rose-400 text-rose-700 px-4 py-3 rounded shadow-lg flex items-center justify-between min-w-[300px]">
             <span className="font-medium text-sm">{errorMsg}</span>
             <button onClick={() => setErrorMsg('')} className="text-rose-700 hover:text-rose-900 ml-4 font-bold">×</button>
           </div>
         )}
-        {activeTab === 'stateless' ? (
+        {!selectedProjectId && activeTab !== 'jobs' ? (
+          <div className="flex-1 flex items-center justify-center text-slate-500">请先创建或选择项目</div>
+        ) : activeTab === 'stateless' ? (
           <StatelessServiceModal
+            project={projects.find(p => p.id === selectedProjectId)}
+            key={selectedProjectId}
             projectId={selectedProjectId || 'default'}
+            onEditProject={() => setEditingProject(projects.find(p => p.id === selectedProjectId) || null)}
           />
         ) : activeTab === 'framework' ? (
-          <FrameworkConfigModal
-            project={projects.find(p => p.id === selectedProjectId) || {
-              id: selectedProjectId || 'default',
-              name: '默认系统',
-              type: 'crond',
-              ownerId: '',
-              createdAt: Date.now()
-            }}
-            onUpdated={(updatedProj) => {
-              setProjects(prev => prev.map(p => p.id === updatedProj.id ? updatedProj : p));
-            }}
-          />
+          <FrameworkConfigModal />
         ) : activeTab === 'datastore' ? (
           <DataStoreModule
+            key={selectedProjectId}
             projectId={selectedProjectId || 'default'}
           />
         ) : (
@@ -464,15 +487,22 @@ export default function App() {
                               {job.cronExp ? job.cronExp : <span className="text-[10px] text-slate-400 font-sans tracking-wide">HTTP Endpoint / Manual</span>}
                             </td>
                             <td className="px-6 py-4">
-                              {job.status === 'active' ? (
-                                <div className="flex items-center text-[10px] text-emerald-600 font-bold uppercase tracking-widest">
-                                  <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2"></div> Active
-                                </div>
-                              ) : (
-                                <div className="flex items-center text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                                  <div className="w-2 h-2 rounded-full bg-slate-300 mr-2"></div> Inactive
-                                </div>
-                              )}
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  role="switch"
+                                  aria-label={`启用调度：${job.name}`}
+                                  aria-checked={job.status === 'active'}
+                                  onClick={() => handleToggle(job)}
+                                  title={job.status === 'active' ? '停用调度' : '启用调度'}
+                                  className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${job.status === 'active' ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                >
+                                  <span className={`h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${job.status === 'active' ? 'translate-x-4' : 'translate-x-1'}`} />
+                                </button>
+                                <span className={`inline-block w-20 shrink-0 text-[10px] font-bold uppercase tracking-widest ${job.status === 'active' ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                  {job.status === 'active' ? 'Active' : 'Inactive'}
+                                </span>
+                              </div>
                             </td>
                             <td className="px-6 py-4 text-right space-x-2">
                               <button onClick={() => handleRun(job.id)} className="text-emerald-500 hover:text-emerald-700 transition-colors p-1" title="运行">
@@ -552,9 +582,20 @@ export default function App() {
       )}
 
       {showProjectModal && (
-        <ProjectModal 
+        <ProjectModal
           onClose={() => setShowProjectModal(false)}
-          onCreated={createProject}
+          onSave={(name, slug) => createProject(name, 'crond', slug)}
+        />
+      )}
+
+      {editingProject && (
+        <ProjectModal key={editingProject.id} project={editingProject}
+          onClose={() => setEditingProject(null)}
+          onSave={async (name, slug) => {
+            const updated = await api.updateProject(editingProject.id, { name, slug });
+            setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
+            setEditingProject(null);
+          }}
         />
       )}
 

@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { api } from '../services/api';
 import Editor from '@monaco-editor/react';
 import { X, Play, Clock, CheckCircle2, Save, Trash2, Terminal as TerminalIcon, Terminal } from 'lucide-react';
-import { format } from 'date-fns';
-import { CronExpressionParser } from 'cron-parser';
+import CronPreview from './CronPreview';
 import { Job } from '../types';
 
 interface ShellJobModalProps {
@@ -24,34 +23,25 @@ export default function ShellJobModal({ projectId, job, onClose, onSaved }: Shel
     }
   );
   const [error, setError] = useState('');
-  const [nextRun, setNextRun] = useState('');
-  const [terminalOutput, setTerminalOutput] = useState<string[]>(['[系统] Shell 仿真终端环境就绪。', '[系统] Bash 安全会话已建立。']);
+  const [terminalOutput, setTerminalOutput] = useState<string[]>(['[系统] Shell 后台终端就绪。', '[系统] 脚本将在后台工作目录执行。']);
   const [isRunning, setIsRunning] = useState(false);
 
-  useEffect(() => {
-    try {
-      if (formData.cronExp) {
-        const interval = CronExpressionParser.parse(formData.cronExp);
-        setNextRun(format(interval.next().toDate(), 'yyyy-MM-dd HH:mm:ss'));
-      }
-    } catch (e) {
-      setNextRun('表达式无效');
-    }
-  }, [formData.cronExp]);
-
-  const handleRun = () => {
+  const handleRun = async () => {
     setIsRunning(true);
-    setTerminalOutput(prev => [...prev, `[Bash] ${new Date().toLocaleTimeString()} 正在安全运行脚本...`]);
-    
-    setTimeout(() => {
-      setTerminalOutput(prev => [...prev, '[输出] 执行成功: 所有 Shell 批处理指令完成。', '[进程] 进程正常退出，退出返回码 (Code 0)']);
+    setTerminalOutput(prev => [...prev, '[系统] 正在执行后台脚本...']);
+    try {
+      const result = await api.executeJob(projectId, { ...formData, type: 'shell' });
+      setTerminalOutput(prev => [...prev, result.output || '(无输出)', `[系统] 执行${result.status === 'success' ? '成功' : '失败'}，用时 ${result.duration}ms`]);
+    } catch (err: any) {
+      setTerminalOutput(prev => [...prev, `[ERROR] ${err.message || '执行失败'}`]);
+    } finally {
       setIsRunning(false);
-    }, 1000);
+    }
   };
 
   const handleSubmit = async () => {
     try {
-      if (job) {
+      if (job?.id) {
         await api.updateJob(job.id.toString(), { ...formData, projectId, type: 'shell' });
       } else {
         await api.createJob(projectId, { ...formData, type: 'shell' });
@@ -90,7 +80,7 @@ export default function ShellJobModal({ projectId, job, onClose, onSaved }: Shel
                 <Save className="w-3.5 h-3.5 mr-2" />
                 保存
              </button>
-             {job && (
+             {job?.id && (
                <button 
                   onClick={async () => {
                      if (confirm('确认删除此定时任务？')) {
@@ -127,6 +117,13 @@ export default function ShellJobModal({ projectId, job, onClose, onSaved }: Shel
                 onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
               />
            </div>
+           <label className="text-xs text-slate-400">调度状态
+             <select aria-label="调度状态" value={formData.status || 'active'}
+               onChange={e => setFormData(prev => ({ ...prev, status: e.target.value as Job['status'] }))}
+               className="block mt-2 bg-slate-900 border border-slate-600 rounded px-3 py-2 text-slate-200">
+               <option value="active">启用</option><option value="inactive">停用（仅手动运行）</option>
+             </select>
+           </label>
            <div className="w-48">
               <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">Cron 表达式</label>
               <input 
@@ -137,8 +134,8 @@ export default function ShellJobModal({ projectId, job, onClose, onSaved }: Shel
                 onChange={e => setFormData(prev => ({ ...prev, cronExp: e.target.value }))}
               />
            </div>
-           <div className="w-40 text-right text-slate-400 text-xs font-mono">
-              下次预期执行时间: {nextRun}
+           <div className="max-w-64 text-right text-slate-400 text-xs font-mono">
+              下次预期执行时间: <CronPreview expression={formData.cronExp} />
            </div>
         </div>
 
@@ -168,7 +165,7 @@ export default function ShellJobModal({ projectId, job, onClose, onSaved }: Shel
            <div className="h-7 bg-[#252526] px-4 flex items-center justify-between border-b border-[#333]">
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center">
                  <TerminalIcon className="w-3 h-3 mr-2" />
-                 BASH 模拟控制台
+                 BASH 控制台
               </div>
               <button onClick={() => setTerminalOutput([])} className="hover:text-white text-slate-600">
                  <Trash2 className="w-3 h-3" />

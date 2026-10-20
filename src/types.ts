@@ -11,11 +11,13 @@ export interface User {
 export interface Project {
   id: string;
   name: string;
+  slug: string;
   type: 'crond';
   ownerId: string;
   createdAt: number;
   phpBootstrap?: string;
   entryFileId?: string;
+  framework?: { name: string; version: string; entryFileId: string };
 }
 
 export interface ProjectFile {
@@ -58,11 +60,14 @@ export interface JobLog {
   output: string;
 }
 
+export type ServiceMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
+
 export interface StatelessService {
   id: string;
   projectId: string;
   name: string;
   route: string;
+  method: ServiceMethod;
   content: string;
   status: 'active' | 'inactive';
   createdAt: number;

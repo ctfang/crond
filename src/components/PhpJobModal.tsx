@@ -3,8 +3,7 @@ import { api } from '../services/api';
 import Editor, { useMonaco } from '@monaco-editor/react';
 import { registerPhpCompletion } from '../lib/monaco-php';
 import { X, Play, Clock, CheckCircle2, Save, Trash2, Terminal as TerminalIcon, Code2 } from 'lucide-react';
-import { format } from 'date-fns';
-import { CronExpressionParser } from 'cron-parser';
+import CronPreview from './CronPreview';
 import { Job } from '../types';
 
 interface PhpJobModalProps {
@@ -25,20 +24,8 @@ export default function PhpJobModal({ projectId, job, onClose, onSaved }: PhpJob
     }
   );
   const [error, setError] = useState('');
-  const [nextRun, setNextRun] = useState('');
-  const [terminalOutput, setTerminalOutput] = useState<string[]>(['[系统] PHP 工作站仿真就绪。', '[系统] 脚本编辑就绪。']);
+  const [terminalOutput, setTerminalOutput] = useState<string[]>(['[系统] PHP 后台工作站就绪。', '[系统] 脚本编辑就绪。']);
   const [isRunning, setIsRunning] = useState(false);
-
-  useEffect(() => {
-    try {
-      if (formData.cronExp) {
-        const interval = CronExpressionParser.parse(formData.cronExp);
-        setNextRun(format(interval.next().toDate(), 'yyyy-MM-dd HH:mm:ss'));
-      }
-    } catch (e) {
-      setNextRun('表达式无效');
-    }
-  }, [formData.cronExp]);
 
   const monaco = useMonaco();
 
@@ -48,26 +35,22 @@ export default function PhpJobModal({ projectId, job, onClose, onSaved }: PhpJob
     }
   }, [monaco]);
 
-  const handleRun = () => {
+  const handleRun = async () => {
     setIsRunning(true);
-    setTerminalOutput(prev => [...prev, `[${format(new Date(), 'HH:mm:ss')}] 手动联调试运行启动...`]);
-    
-    setTimeout(() => {
-      setTerminalOutput(prev => [
-        ...prev, 
-        `[${format(new Date(), 'HH:mm:ss')}] 正在读取框架 Bootstrap 系统引导...`,
-        `[系统] 框架载荷完成，初始化 PHP 虚环境上下文。`,
-        `[${format(new Date(), 'HH:mm:ss')}] PHP 脚本安全执行完毕 (用时 245ms)。`, 
-        '[输出] PHP Crond task started...',
-        '[输出] 任务返回执行成功退出码 (Code 0)。'
-      ]);
+    setTerminalOutput(prev => [...prev, '[系统] 正在执行后台脚本...']);
+    try {
+      const result = await api.executeJob(projectId, { ...formData, type: 'php' });
+      setTerminalOutput(prev => [...prev, result.output || '(无输出)', `[系统] 执行${result.status === 'success' ? '成功' : '失败'}，用时 ${result.duration}ms`]);
+    } catch (err: any) {
+      setTerminalOutput(prev => [...prev, `[ERROR] ${err.message || '执行失败'}`]);
+    } finally {
       setIsRunning(false);
-    }, 1500);
+    }
   };
 
   const handleSubmit = async () => {
     try {
-      if (job) {
+      if (job?.id) {
         await api.updateJob(job.id.toString(), { ...formData, projectId, type: 'php' });
       } else {
         await api.createJob(projectId, { ...formData, type: 'php' });
@@ -106,7 +89,7 @@ export default function PhpJobModal({ projectId, job, onClose, onSaved }: PhpJob
                 <Save className="w-3.5 h-3.5 mr-2" />
                 保存
              </button>
-             {job && (
+             {job?.id && (
                <button 
                   onClick={async () => {
                      if (confirm('确认删除此定时任务？')) {
@@ -143,6 +126,13 @@ export default function PhpJobModal({ projectId, job, onClose, onSaved }: PhpJob
                 onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
               />
            </div>
+           <label className="text-xs text-slate-400">调度状态
+             <select aria-label="调度状态" value={formData.status || 'active'}
+               onChange={e => setFormData(prev => ({ ...prev, status: e.target.value as Job['status'] }))}
+               className="block mt-2 bg-slate-900 border border-slate-600 rounded px-3 py-2 text-slate-200">
+               <option value="active">启用</option><option value="inactive">停用（仅手动运行）</option>
+             </select>
+           </label>
            <div className="w-48">
               <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">Cron 表达式</label>
               <input 
@@ -153,9 +143,9 @@ export default function PhpJobModal({ projectId, job, onClose, onSaved }: PhpJob
                 onChange={e => setFormData(prev => ({ ...prev, cronExp: e.target.value }))}
               />
            </div>
-           <div className="w-40 text-right">
+           <div className="max-w-64 text-right">
               <div className="text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">预计下次执行时间</div>
-              <div className="text-[11px] text-slate-400 font-mono truncate">{nextRun}</div>
+              <div className="text-[11px] text-slate-400 font-mono"><CronPreview expression={formData.cronExp} /></div>
            </div>
         </div>
 
@@ -189,7 +179,7 @@ export default function PhpJobModal({ projectId, job, onClose, onSaved }: PhpJob
               <div className="h-8 bg-[#252526] px-4 flex items-center justify-between border-b border-[#333]">
                  <div className="text-[10px] font-bold text-white uppercase tracking-widest flex items-center">
                     <TerminalIcon className="w-3 h-3 mr-2 text-indigo-400" />
-                    模拟 PHP 控制台输出
+                    PHP 控制台输出
                  </div>
                  <button onClick={() => setTerminalOutput(['[系统] 控制台日志已清空。'])} className="hover:text-white text-slate-500">
                     <Trash2 className="w-3 h-3" />
@@ -217,7 +207,7 @@ export default function PhpJobModal({ projectId, job, onClose, onSaved }: PhpJob
         {/* Footer */}
         <div className="h-6 bg-indigo-900 text-white flex items-center px-4 justify-between shrink-0 text-[10px] font-bold tracking-wider uppercase">
            <div className="flex items-center space-x-4">
-              <span className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-1.5 text-emerald-400" /> PHP 8.3-ZTS 工作节点</span>
+              <span className="flex items-center"><CheckCircle2 className="w-3 h-3 mr-1.5 text-emerald-400" /> Origami 工作节点</span>
               <span>内存限额: 256MB</span>
            </div>
            <div>云原生 Crond 自动化调度平台</div>

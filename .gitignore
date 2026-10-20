@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+
+backend/data/*
+!backend/data/framework/
+!backend/data/tools/
+backend/crond-server

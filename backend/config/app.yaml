@@ -1,0 +1,14 @@
+name: crond
+debug: env("APP_DEBUG", false)
+url: env("APP_URL", "https://127.0.0.1")
+
+servers:
+  http:
+    port: env("HTTP_PORT", 8080)
+
+log:
+  path: env("LOG_PATH", "./data/logs/app.log")
+  # trace debug info warn warning error fatal panic
+  level: env("LOG_LEVEL", "trace")
+  # text json
+  formatter: env("LOG_FORMATTER", "text")

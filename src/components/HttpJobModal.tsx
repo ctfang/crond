@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { X, Clock, CheckCircle2, Trash2, Globe, Terminal as TerminalIcon, Plus } from 'lucide-react';
-import { format } from 'date-fns';
-import { CronExpressionParser } from 'cron-parser';
+import CronPreview from './CronPreview';
 import { Job } from '../types';
 
 interface HttpJobModalProps {
@@ -47,83 +46,6 @@ export function decodeHttpConfig(content: string): HttpConfig {
   };
 }
 
-/**
- * 模拟发起真正的 HTTP/HTTPS 请求
- * 外部可直接对接真正的 Axios 或 Fetch API 替换此处的模拟实现
- */
-export async function executeHttpSimulation(
-  url: string,
-  method: string,
-  headers: Record<string, string>,
-  body: string
-): Promise<{ status: number; statusText: string; data: any; headers: Record<string, string> }> {
-  // 模拟网络延迟
-  await new Promise(resolve => setTimeout(resolve, 800));
-
-  // 简单 URL 协议校验
-  if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
-    throw new Error('无效的目标协议，URL 必须以 http:// 或 https:// 开头。');
-  }
-
-  // 准备响应数据
-  let responseData: any = {
-    message: "HTTP 定时任务模拟请求成功",
-    timestamp: new Date().toISOString(),
-    requestDetails: {
-      method,
-      url,
-      headersCount: Object.keys(headers).length,
-    }
-  };
-
-  if (body) {
-    try {
-      responseData.requestDetails.payload = JSON.parse(body);
-    } catch {
-      responseData.requestDetails.payload = body;
-    }
-  }
-
-  let status = 200;
-  let statusText = "OK";
-
-  // 模拟一些状态报错，更贴合开发实际测试
-  const lowerUrl = url.toLowerCase();
-  if (lowerUrl.includes('error') || lowerUrl.includes('fail')) {
-    status = 500;
-    statusText = "Internal Server Error";
-    responseData = { 
-      error: "服务器内部异常", 
-      details: "Simulated host response status code 500 from endpoint." 
-    };
-  } else if (lowerUrl.includes('auth') && !headers['Authorization'] && !headers['authorization']) {
-    status = 401;
-    statusText = "Unauthorized";
-    responseData = { 
-      error: "未授权的访问", 
-      details: "请求头中缺少授权凭据 (Missing 'Authorization' in headers)" 
-    };
-  } else if (lowerUrl.includes('notfound') || lowerUrl.includes('404')) {
-    status = 404;
-    statusText = "Not Found";
-    responseData = {
-      error: "接口未找到",
-      details: "Simulated resource not found on remote worker host."
-    };
-  }
-
-  return {
-    status,
-    statusText,
-    data: responseData,
-    headers: {
-      "content-type": "application/json",
-      "x-powered-by": "crond-http-runtime",
-      "cache-control": "no-cache"
-    }
-  };
-}
-
 export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJobModalProps) {
   const [formData, setFormData] = useState<Partial<Job>>(
     job || { 
@@ -146,7 +68,6 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
 
   const [activeTab, setActiveTab] = useState<'url' | 'headers' | 'body'>('url');
   const [error, setError] = useState('');
-  const [nextRun, setNextRun] = useState('');
   
   const [httpResponse, setHttpResponse] = useState<{
     status: number;
@@ -159,18 +80,6 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
   
   const [respTab, setRespTab] = useState<'body' | 'headers'>('body');
   const [isRunning, setIsRunning] = useState(false);
-
-  // Parse and display next cron run time
-  useEffect(() => {
-    try {
-      if (formData.cronExp) {
-        const interval = CronExpressionParser.parse(formData.cronExp);
-        setNextRun(format(interval.next().toDate(), 'yyyy-MM-dd HH:mm:ss'));
-      }
-    } catch (e) {
-      setNextRun('表达式无效');
-    }
-  }, [formData.cronExp]);
 
   // Synchronize fields inside the unified Json string
   useEffect(() => {
@@ -219,7 +128,12 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
 
     const startTime = Date.now();
     try {
-      const response = await executeHttpSimulation(url, method, headersObj, requestBody);
+      const result = await api.executeJob(projectId, {
+        name: formData.name || 'HTTP 试运行', type: 'http',
+        content: encodeHttpConfig({ url, method, headers: headersObj, body: requestBody }),
+      });
+      if (!result.http) throw new Error(result.output || 'HTTP 请求失败');
+      const response = result.http;
       const duration = Date.now() - startTime;
       setHttpResponse({
         status: response.status,
@@ -235,7 +149,7 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
         statusText: 'Error',
         headers: { 'content-type': 'text/plain' },
         data: null,
-        error: e.message || '网络请求异常失败 (模拟异常或非法协议)',
+        error: e.message || '网络请求失败',
         timeMs: duration
       });
     } finally {
@@ -249,7 +163,7 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
       if (!url.trim()) {
         throw new Error('目标 URL 不能为空');
       }
-      if (job) {
+      if (job?.id) {
         await api.updateJob(job.id.toString(), { ...formData, projectId, type: 'http' });
       } else {
         await api.createJob(projectId, { ...formData, type: 'http' });
@@ -298,6 +212,13 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
                    onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
                  />
               </div>
+           <label className="text-xs text-slate-400">调度状态
+             <select aria-label="调度状态" value={formData.status || 'active'}
+               onChange={e => setFormData(prev => ({ ...prev, status: e.target.value as Job['status'] }))}
+               className="block mt-2 bg-slate-900 border border-slate-600 rounded px-3 py-2 text-slate-200">
+               <option value="active">启用</option><option value="inactive">停用（仅手动运行）</option>
+             </select>
+           </label>
               <div>
                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">Cron 表达式</label>
                  <input 
@@ -308,7 +229,7 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
                    onChange={e => setFormData(prev => ({ ...prev, cronExp: e.target.value }))}
                  />
                  <div className="mt-1 text-[10px] text-slate-500 flex items-center">
-                    <Clock className="w-3 h-3 mr-1" /> 下一次运行: {nextRun}
+                    <Clock className="w-3 h-3 mr-1" /> 下一次运行: <CronPreview expression={formData.cronExp} />
                  </div>
               </div>
            </div>
@@ -523,12 +444,12 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
                     {isRunning ? (
                       <div className="flex flex-col items-center space-y-3">
                          <div className="w-6 h-6 rounded-full border-2 border-indigo-500/25 border-t-indigo-500 animate-spin"></div>
-                         <div className="text-xs text-indigo-400 font-mono animate-pulse">正在进行联调联试，已提交模拟网络请求...</div>
+                         <div className="text-xs text-indigo-400 font-mono animate-pulse">正在进行联调联试，已提交后台网络请求...</div>
                       </div>
                     ) : (
                       <div className="space-y-1.5 select-none">
                          <p className="text-xs font-medium text-slate-400">目前暂无网路响应返回值数据</p>
-                         <p className="text-[10px] text-slate-600 font-sans max-w-md">点击右下方的 &ldquo;立即测试&rdquo; 按钮，即可由内置微处理器模拟派发真实 HTTP/HTTPS 网络封包，将目标服务端响应结果格式化在此显示。</p>
+                         <p className="text-[10px] text-slate-600 font-sans max-w-md">点击右下方的 &ldquo;立即测试&rdquo; 按钮，即可由 Go 后台发送 HTTP/HTTPS 请求，将目标服务端响应结果格式化在此显示。</p>
                       </div>
                     )}
                  </div>
@@ -557,7 +478,7 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
               >
                  保存任务
               </button>
-              {job && (
+              {job?.id && (
                 <button 
                   onClick={async () => {
                      if (confirm('确认删除此定时任务吗？')) {

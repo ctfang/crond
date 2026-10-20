@@ -1,26 +1,30 @@
 import React, { useState } from 'react';
-import { X, Folder, Clock } from 'lucide-react';
+import { X, Folder, Link } from 'lucide-react';
+import type { Project } from '../types';
 
 interface ProjectModalProps {
   onClose: () => void;
-  onCreated: (name: string, type: 'crond') => Promise<void>;
+  project?: Project;
+  onSave: (name: string, slug: string) => Promise<void>;
 }
 
-export default function ProjectModal({ onClose, onCreated }: ProjectModalProps) {
-  const [name, setName] = useState('');
+export default function ProjectModal({ onClose, onSave, project }: ProjectModalProps) {
+  const [name, setName] = useState(project?.name || '');
+  const [slug, setSlug] = useState(project?.slug || '');
+  const validSlug = slug.length <= 63 && /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(slug);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !validSlug) return;
     
     setLoading(true);
     setError('');
     try {
-      await onCreated(name, 'crond');
+      await onSave(name.trim(), slug);
     } catch (err: any) {
-      setError(err.message || 'Failed to create project');
+      setError(err.message || '保存项目失败');
       setLoading(false);
     }
   };
@@ -30,8 +34,8 @@ export default function ProjectModal({ onClose, onCreated }: ProjectModalProps) 
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <h2 className="text-lg font-bold text-slate-800 flex items-center">
-            <Clock className="w-5 h-5 mr-2 text-indigo-500" />
-            新建定时任务项目 (New Crond Project)
+            <Folder className="w-5 h-5 mr-2 text-indigo-500" />
+            {project ? '编辑项目' : '新建项目'}
           </h2>
           <button 
             onClick={onClose} 
@@ -49,8 +53,8 @@ export default function ProjectModal({ onClose, onCreated }: ProjectModalProps) 
           )}
 
           <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">项目名称 (Project Name)</label>
-            <input
+            <label htmlFor="project-name" className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">项目名称 (Project Name)</label>
+            <input id="project-name"
               type="text"
               required
               autoFocus
@@ -61,16 +65,20 @@ export default function ProjectModal({ onClose, onCreated }: ProjectModalProps) 
             />
           </div>
 
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
-                <Clock className="w-4 h-4 text-indigo-600" />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-slate-700">定时任务 (Crond)</div>
-                <div className="text-[10px] text-slate-500">支持 PHP/Shell 脚本周期性执行</div>
-              </div>
+          <div>
+            <label htmlFor="project-slug" className="block text-xs font-medium text-slate-500 mb-2">项目标识</label>
+            <div className="relative">
+              <Link className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+              <input id="project-slug" required maxLength={63} pattern="[a-z][a-z0-9]*(-[a-z0-9]+)*"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none"
+                placeholder="例如：my-project" value={slug} onChange={e => setSlug(e.target.value.toLowerCase())}
+                aria-describedby="project-slug-help" />
             </div>
+            <p id="project-slug-help" className="mt-2 text-xs text-slate-400">全局唯一，以字母开头，支持小写字母、数字和连字符。</p>
+            {validSlug && <div className="mt-3 px-3 py-2 rounded-lg bg-indigo-50 text-xs text-indigo-600 font-mono break-all">
+              {window.location.origin}/{slug}/**
+            </div>}
+            {project?.slug && slug !== project.slug && <p className="mt-2 text-xs text-amber-600">保存后，服务访问地址将使用新的项目标识。</p>}
           </div>
 
           <div className="pt-2 flex space-x-3">
@@ -83,10 +91,10 @@ export default function ProjectModal({ onClose, onCreated }: ProjectModalProps) 
             </button>
             <button
               type="submit"
-              disabled={loading || !name.trim()}
+              disabled={loading || !name.trim() || !validSlug}
               className="flex-[2] px-4 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-800 shadow-lg shadow-slate-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? '创建中...' : '确认创建'}
+              {loading ? '保存中...' : project ? '保存修改' : '确认创建'}
             </button>
           </div>
         </form>

@@ -98,28 +98,11 @@ export default function DataStoreModule({ projectId }: Props) {
     }
 
     try {
-      const isMock = cleanId.startsWith('mock_');
-      let createdCol: DataCollection;
-      
-      if (isMock) {
-        createdCol = {
-          id: cleanId,
-          projectId,
-          name: cleanId.replace('mock_', ''),
-          displayName: cleanName,
-          description: newColDesc.trim(),
-          createdAt: Date.now()
-        };
-        setCollections(prev => [createdCol, ...prev]);
-      } else {
-        createdCol = await api.upsertDataCollection(projectId, {
-          name: cleanId,
-          displayName: cleanName,
-          description: newColDesc.trim()
-        });
-        setCollections(prev => [createdCol, ...prev]);
-      }
-      
+      const createdCol = await api.upsertDataCollection(projectId, {
+        name: cleanId, displayName: cleanName, description: newColDesc.trim()
+      });
+      setCollections(prev => [createdCol, ...prev]);
+
       setSelectedCollection(createdCol);
       setShowCreateCollection(false);
       setNewColId('');
@@ -136,18 +119,9 @@ export default function DataStoreModule({ projectId }: Props) {
     if (!confirmation) return;
 
     try {
-      if (col.id.startsWith('mock_')) {
-        setCollections(prev => prev.filter(c => c.id !== col.id));
-        if (selectedCollection?.id === col.id) {
-          setSelectedCollection(null);
-        }
-      } else {
-        await api.deleteDataCollection(projectId, col.id);
-        setCollections(prev => prev.filter(c => c.id !== col.id));
-        if (selectedCollection?.id === col.id) {
-          setSelectedCollection(null);
-        }
-      }
+      await api.deleteDataCollection(projectId, col.id);
+      setCollections(prev => prev.filter(c => c.id !== col.id));
+      if (selectedCollection?.id === col.id) setSelectedCollection(null);
     } catch (err) {
       alert('删除失败');
     }
@@ -162,15 +136,8 @@ export default function DataStoreModule({ projectId }: Props) {
     } else {
       setEditingRecord(null);
       
-      // Provide appropriate placeholder template JSON depending on the collection (Ensuring 'key' is present)
-      let defaultTemplate = '{\n  "key": "custom_record_key",\n  "title": "",\n  "status": "pending"\n}';
-      if (selectedCollection?.id === 'mock_users') {
-        defaultTemplate = '{\n  "key": "user_' + Math.random().toString(36).substring(2, 6) + '",\n  "username": "王五",\n  "email": "wangwu@example.com",\n  "role": "member",\n  "age": 25,\n  "status": "active",\n  "balance": 100.0,\n  "lastLogin": "' + new Date().toISOString().replace('T', ' ').substring(0, 19) + '"\n}';
-      } else if (selectedCollection?.id === 'mock_configs') {
-        defaultTemplate = '{\n  "key": "custom_api_url",\n  "config_key": "custom_api_url",\n  "value": "https://api.myproject.com",\n  "type": "string",\n  "group": "network",\n  "last_updated_by": "developer_sys"\n}';
-      } else if (selectedCollection?.id === 'mock_api_logs') {
-        defaultTemplate = '{\n  "key": "log_' + Math.random().toString(36).substring(2, 8) + '",\n  "request_id": "req_' + Math.random().toString(36).substring(2, 8) + '",\n  "endpoint": "/api/v1/data/query",\n  "method": "POST",\n  "ip": "127.0.0.1",\n  "status": 200,\n  "execution_ms": 15,\n  "client": "local-crond"\n}';
-      }
+      // The backend supplies a unique key when it is omitted.
+      const defaultTemplate = '{\n  "title": "",\n  "status": "pending"\n}';
       setRecordJson(defaultTemplate);
     }
     setShowEditRecord(true);
@@ -190,9 +157,8 @@ export default function DataStoreModule({ projectId }: Props) {
         return;
       }
       
-      // Enforce the mandatory 'key' field as requested
-      if (!parsedData.key || typeof parsedData.key !== 'string' || !parsedData.key.trim()) {
-        setRecordError('数据存储强制：所有文档都必须包含一个非空的 "key" 属性（例如："key": "my_unique_id"）作为关键索引值');
+      if ('key' in parsedData && (typeof parsedData.key !== 'string' || !parsedData.key.trim())) {
+        setRecordError('key 必须是非空字符串；省略时后台自动生成');
         return;
       }
     } catch (err: any) {
@@ -201,37 +167,11 @@ export default function DataStoreModule({ projectId }: Props) {
     }
 
     try {
-      const isMockCol = selectedCollection.id.startsWith('mock_');
-      const isMockRec = editingRecord?.id.startsWith('rec_');
-      
-      if (isMockCol) {
-        // Handle mock update / insert
-        if (editingRecord) {
-          setRecords(prev => prev.map(r => r.id === editingRecord.id ? { ...r, data: parsedData, updatedAt: Date.now() } : r));
-        } else {
-          const freshMock: DataRecord = {
-            id: 'rec_custom_' + Math.random().toString(36).substring(2, 9),
-            collectionId: selectedCollection.id,
-            projectId,
-            data: parsedData,
-            updatedAt: Date.now()
-          };
-          setRecords(prev => [freshMock, ...prev]);
-        }
-      } else {
-        const result = await api.upsertDataRecord(
-          projectId, 
-          selectedCollection.id, 
-          editingRecord ? editingRecord.id : null, 
-          parsedData
-        );
-        
-        if (editingRecord) {
-          setRecords(prev => prev.map(r => r.id === editingRecord.id ? result : r));
-        } else {
-          setRecords(prev => [result, ...prev]);
-        }
-      }
+      const result = await api.upsertDataRecord(projectId, selectedCollection.id,
+        editingRecord ? editingRecord.id : null, parsedData);
+      setRecords(prev => editingRecord
+        ? prev.map(r => r.id === editingRecord.id ? result : r)
+        : [result, ...prev]);
       setShowEditRecord(false);
     } catch (err: any) {
       setRecordError('文档保存失败：' + (err.message || err));
@@ -245,12 +185,8 @@ export default function DataStoreModule({ projectId }: Props) {
     if (!confirmation) return;
 
     try {
-      if (selectedCollection.id.startsWith('mock_')) {
-        setRecords(prev => prev.filter(r => r.id !== recordId));
-      } else {
-        await api.deleteDataRecord(projectId, selectedCollection.id, recordId);
-        setRecords(prev => prev.filter(r => r.id !== recordId));
-      }
+      await api.deleteDataRecord(projectId, selectedCollection.id, recordId);
+      setRecords(prev => prev.filter(r => r.id !== recordId));
     } catch (err) {
       alert('删除失败');
     }
@@ -340,7 +276,6 @@ export default function DataStoreModule({ projectId }: Props) {
             ) : (
               collections.map(col => {
                 const isSelected = selectedCollection?.id === col.id;
-                const isMock = col.id.startsWith('mock_');
                 return (
                   <div 
                     key={col.id}
@@ -370,7 +305,8 @@ export default function DataStoreModule({ projectId }: Props) {
                     </div>
                     
                     <span className="text-[10px] font-mono text-slate-400 mt-1 block tracking-wider uppercase font-semibold">
-                      id: {col.name} {isMock && <span className="text-[8px] bg-amber-50 text-amber-600 border border-amber-100 px-1 rounded ml-1 font-sans">示范 Demo</span>}
+                      集合: {col.name}
+                      <span className="block normal-case break-all mt-1 select-text" title="数据 API 使用此 ID">ID: {col.id}</span>
                     </span>
                     
                     {col.description && (
@@ -759,7 +695,7 @@ export default function DataStoreModule({ projectId }: Props) {
                   1. 定时任务中写入数据示例 (PHP Executable Job)
                 </h5>
                 <p className="mb-2 text-slate-500">
-                  在您配置的 PHP Job 或者 crond 定时执行脚本中，直接调用系统预装的库来写数据。
+                  在您配置的 PHP Job 或者 crond 定时执行脚本中，直接调用后台提供的 Database.php 库来写数据。
                 </p>
                 <pre className="p-3 bg-slate-900 text-amber-300 rounded-xl font-mono text-[10px] leading-relaxed overflow-x-auto">
 {`<?php
@@ -791,12 +727,10 @@ echo "[INFO] 写入审计配置完毕";
                 <pre className="p-3 bg-slate-900 text-amber-300 rounded-xl font-mono text-[10px] leading-relaxed overflow-x-auto">
 {`<?php
 
-function handle(Request $request) 
+function handle(\\Framework\\Request $request) 
 {
-    require_once "src/Database.php";
-    
     // 获取全局系统配置
-    $configs = Database::collection("system_configs")->find([
+    $configs = \\Framework\\Database::collection("system_configs")->find([
         "config_key" => "enable_new_user_registration"
     ]);
     
@@ -823,14 +757,15 @@ function handle(Request $request)
                   3. 使用标准 curl / CLI 写入行数据 (Bash Shell)
                 </h5>
                 <p className="mb-2 text-slate-500">
-                  如果您在 Shell 定时任务中，也可以采用系统内设的环境变量直接推送记录。
+                  如果您在 Shell 定时任务中，使用后台为本次执行提供的项目凭据推送记录，集合 ID 可从页面查看。
                 </p>
                 <pre className="p-3 bg-slate-900 text-amber-300 rounded-xl font-mono text-[10px] leading-relaxed overflow-x-auto">
-{`# 模拟在 Crond Job Bash 代码块中进行推送
+{`# 在任务内写入记录（将 COLLECTION_ID 替换为集合 ID）
 curl -X POST \\
+  -H "Authorization: Bearer $CROND_API_TOKEN" \\
   -H "Content-Type: application/json" \\
-  -d '{"request_id":"cron_shell_run","endpoint":"system_reboot","status":200,"execution_ms":453}' \\
-  "http://localhost:3000/api/internal/collections/api_logs/records"
+  -d '{"data":{"request_id":"cron_shell_run","status":200}}' \\
+  "$CROND_API_URL/collections/COLLECTION_ID/records"
 `}
                 </pre>
               </div>

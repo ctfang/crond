@@ -11,7 +11,7 @@ const types: { id: JobType; title: string; desc: string; icon: any; color: strin
   { 
     id: 'php', 
     title: 'PHP 脚本', 
-    desc: '使用完整的 PHP 语法编写复杂的周期性业务逻辑。', 
+    desc: '使用 Origami 支持的 PHP 语法编写周期性业务逻辑。',
     icon: Code2, 
     color: 'text-indigo-500 bg-indigo-50' 
   },

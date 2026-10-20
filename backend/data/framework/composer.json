@@ -1,0 +1,8 @@
+{
+  "name": "app/project",
+  "description": "Shared script framework for scheduled tasks and stateless services",
+  "type": "project",
+  "require": {},
+  "autoload": { "psr-4": { "App\\": "src/" } },
+  "config": { "vendor-dir": "vendor", "allow-plugins": false }
+}
