@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, test } from 'node:test';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
-import { URL, pathToFileURL } from 'node:url';
+import { URL, pathToFileURL, fileURLToPath } from 'node:url';
 import process from 'node:process';
 import { setTimeout } from 'node:timers';
 import { build } from 'esbuild';
@@ -16,9 +16,9 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const components = {};
 for (const name of ['CronPreview', 'ShellJobModal', 'PhpJobModal', 'HttpJobModal']) {
   const compiled = await build({
-    entryPoints: [new URL(`../src/components/${name}.tsx`, import.meta.url).pathname],
+    entryPoints: [fileURLToPath(new URL(`../src/components/${name}.tsx`, import.meta.url))],
     bundle: true, format: 'esm', platform: 'node', write: false,
-    external: ['react', 'react/jsx-runtime', 'lucide-react'],
+    external: ['react-dom', 'react', 'react/jsx-runtime', 'lucide-react'],
     plugins: [{ name: 'cron-boundaries', setup(builder) {
       builder.onResolve({ filter: /services\/api$/ }, () => ({ path: 'api', namespace: 'test' }));
       builder.onResolve({ filter: /^@monaco-editor\/react$/ }, () => ({ path: 'editor', namespace: 'test' }));

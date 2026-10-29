@@ -4,14 +4,14 @@ React 前端 + Go 后台。后台基于 [go-home-admin/go-admin](https://github.
 
 ## 本地启动
 
-需要 Node.js 20.19+、Go 1.27.1+、C 编译器（SQLite 驱动需要 CGO）。Shell 任务与终端需要 `bash`；所有 PHP 执行入口使用后台内置的 Origami，无需安装系统 PHP。
+需要 Node.js 20.19+、Go 1.27.1+。SQLite 使用纯 Go 驱动，无需 CGO 或 C 编译器。Shell 任务与终端需要 `bash` 和 Unix PTY，Windows 请在 WSL 中运行后台；所有 PHP 执行入口使用后台内置的 Origami，无需安装系统 PHP。
 
 ```sh
 npm install
 cd backend
 go mod download
 cp .env.example .env
-go run .
+CGO_ENABLED=0 go run .
 ```
 
 另一个终端启动前端：
@@ -104,4 +104,4 @@ npm run build
 
 框架来源 commit：`2b1ade1d90accf57e81554893075033e8ec48301`。保留其 Apache-2.0 许可证，位于 `backend/LICENSE`；不使用上游依赖 MySQL 的示例实体测试。
 
-脚本引擎固定为 [Origami commit `97ceb072c9d57fe36184af1a3a2152e9b51e9fec`](https://github.com/php-any/origami/commit/97ceb072c9d57fe36184af1a3a2152e9b51e9fec)（Go 模块版本 `v0.0.0-20261020005324-97ceb072c9d5`，2026-10-20）。所有 PHP 执行入口均使用此引擎，支持 PHP 风格语法和部分 PHP 标准库；任务与服务代码须符合 Origami 支持的语法与功能，执行失败直接返回错误。
+脚本引擎固定为 [Origami tag `v1.0.6`](https://github.com/php-any/origami/releases/tag/v1.0.6)（Go 模块版本 `v1.0.6`）。所有 PHP 执行入口均使用此引擎，支持 PHP 风格语法和部分 PHP 标准库；任务与服务代码须符合 Origami 支持的语法与功能，执行失败直接返回错误。

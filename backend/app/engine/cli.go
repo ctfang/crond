@@ -67,6 +67,10 @@ func RunCLI(args []string) (code int) {
 	os.Args = append([]string{os.Args[0], script}, parameters...)
 	p := parser.NewParser()
 	vm := runtime.NewVM(p).(*runtime.VM)
+	// Origami constants are immutable; register the wrapper before PHP defaults.
+	if binary := os.Getenv("CROND_PHP_BINARY"); binary != "" {
+		vm.SetConstant("PHP_BINARY", data.NewStringValue(binary))
+	}
 	std.Load(vm)
 	php.Load(vm)
 	origamihttp.Load(vm)
@@ -74,9 +78,6 @@ func RunCLI(args []string) (code int) {
 	system.Load(vm)
 	vm.RegisterFunction("sys_get_temp_dir", func() string { return os.TempDir() })
 	vm.RegisterFunction("php_uname", func(mode string) string { return goruntime.GOOS })
-	if binary := os.Getenv("CROND_PHP_BINARY"); binary != "" {
-		vm.SetConstant("PHP_BINARY", data.NewStringValue(binary))
-	}
 	phar := inline == "" && IsPhar(script)
 	if phar {
 		extracted, err := ExtractPhar(script)

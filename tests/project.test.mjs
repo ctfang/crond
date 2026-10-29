@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, test } from 'node:test';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
-import { URL, pathToFileURL } from 'node:url';
+import { URL, pathToFileURL, fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 import React from 'react';
 import { act, create } from 'react-test-renderer';
@@ -9,7 +9,7 @@ import { act, create } from 'react-test-renderer';
 const directory = await mkdtemp(new URL('../node_modules/.project-test-', import.meta.url));
 after(() => rm(directory, { recursive: true, force: true }));
 const compiled = await build({
-  entryPoints: [new URL('../src/components/ProjectModal.tsx', import.meta.url).pathname],
+  entryPoints: [fileURLToPath(new URL('../src/components/ProjectModal.tsx', import.meta.url))],
   bundle: true, format: 'esm', platform: 'node', write: false,
   external: ['react', 'react/jsx-runtime', 'lucide-react'],
 });

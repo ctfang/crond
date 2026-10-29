@@ -1,3 +1,5 @@
+import Select from './Select';
+import { confirmAction, notify } from './Feedback';
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Plus, Trash2, Play, Save, Activity, Layout, Copy, Check, Loader2, Send, TerminalSquare, ArrowDownToLine, Clock3, CircleAlert, RotateCcw } from 'lucide-react';
 import { api, type ServiceTestResponse } from '../services/api';
@@ -117,7 +119,7 @@ export default function StatelessServiceModal({ projectId, project, onClose, onE
   const handleSave = async () => {
     if (statusMutation.current) return;
     if (!editingService?.name || !editingService?.route || !editingService?.content) {
-      alert('请填写完整信息');
+      notify('请填写完整信息');
       return;
     }
 
@@ -252,12 +254,12 @@ export default function StatelessServiceModal({ projectId, project, onClose, onE
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('确认删除此无状态服务？')) return;
+    if (!await confirmAction('确认删除此无状态服务？')) return;
     try {
       await api.deleteStatelessService(projectId, id);
       fetchServices();
     } catch (err) {
-      alert('删除失败');
+      notify('删除失败');
     }
   };
 
@@ -279,11 +281,11 @@ export default function StatelessServiceModal({ projectId, project, onClose, onE
             <input ref={serviceNameInput} id="service-name" className="w-16 @min-[720px]:w-24 @min-[1040px]:w-32 shrink-0 h-8 px-2.5 bg-white border border-slate-200 rounded-md text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
               placeholder="服务名称" title="服务名称" value={editingService.name}
               onChange={e => setEditingService({...editingService, name: e.target.value})} />
-            <select aria-label="服务请求方法" title="服务接收的请求方法，修改后保存生效" value={editingService.method || 'GET'}
+            <Select aria-label="服务请求方法" title="服务接收的请求方法，修改后保存生效" value={editingService.method || 'GET'}
               onChange={e => setEditingService({ ...editingService, method: e.target.value as ServiceMethod })}
-              className="h-8 w-[76px] shrink-0 px-1.5 rounded-md border border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+              className="h-8 w-24 shrink-0 px-1.5 rounded-md border border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
               {serviceMethods.map(method => <option key={method}>{method}</option>)}
-            </select>
+            </Select>
             <label htmlFor="service-route" className="sr-only">访问路径</label>
             <div className="h-8 min-w-32 flex-1 flex overflow-hidden bg-white border border-slate-200 rounded-md focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all">
               <button onClick={handleRun} disabled={isRunning || !savedService || savedService.status === 'inactive'} aria-label={isRunning ? '执行中' : '测试服务'} title="测试已保存的服务" className="self-stretch shrink-0 inline-flex items-center justify-center gap-1.5 px-2 border-r border-slate-200 bg-slate-50/60 text-xs font-medium text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
@@ -439,9 +441,9 @@ export default function StatelessServiceModal({ projectId, project, onClose, onE
             <form onSubmit={handleSendRequest} className="flex flex-col flex-1 min-h-0">
               <div className="px-5 py-4 flex items-center gap-3 border-b border-slate-200 shrink-0 bg-slate-50/50">
                 <div className="h-10 min-w-0 flex-1 flex overflow-hidden rounded-lg border border-slate-200 bg-white focus-within:ring-2 focus-within:ring-indigo-500/10 focus-within:border-indigo-400">
-                  <select autoFocus aria-label="请求方法" value={requestMethod} disabled={isRunning} onChange={e => setRequestMethod(e.target.value)} className={`h-full w-24 shrink-0 px-3 border-r border-slate-200 bg-slate-50 text-xs font-semibold outline-none ${requestMethod === 'GET' ? 'text-emerald-700' : requestMethod === 'DELETE' ? 'text-rose-600' : 'text-indigo-600'}`}>
+                  <Select autoFocus aria-label="请求方法" value={requestMethod} disabled={isRunning} onChange={e => setRequestMethod(e.target.value)} className={`h-full w-24 shrink-0 px-3 border-r border-slate-200 bg-slate-50 text-xs font-semibold outline-none ${requestMethod === 'GET' ? 'text-emerald-700' : requestMethod === 'DELETE' ? 'text-rose-600' : 'text-indigo-600'}`}>
                     {serviceMethods.map(method => <option key={method}>{method}</option>)}
-                  </select>
+                  </Select>
                   <input readOnly aria-label="测试地址" value={testAddress} title={testAddress} className="min-w-0 flex-1 px-3 bg-transparent font-mono text-xs text-slate-600 outline-none" />
                 </div>
                 <button type="submit" disabled={isRunning} className="h-10 px-4 shrink-0 inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2">
@@ -473,7 +475,7 @@ export default function StatelessServiceModal({ projectId, project, onClose, onE
                     {hasRequestBody ? <>
                       <div className="flex items-center justify-between gap-2">
                         <label htmlFor="service-test-body" className="text-xs font-medium text-slate-500">请求正文</label>
-                        <select aria-label="请求体格式" value={bodyFormat} disabled={isRunning} onChange={e => setBodyFormat(e.target.value)} className="h-7 px-2 rounded-md bg-slate-50 border border-slate-200 text-[11px] text-slate-600"><option value="json">JSON</option><option value="form">Form URL Encoded</option><option value="text">Text</option></select>
+                        <Select aria-label="请求体格式" value={bodyFormat} disabled={isRunning} onChange={e => setBodyFormat(e.target.value)} className="h-7 px-2 rounded-md bg-slate-50 border border-slate-200 text-[11px] text-slate-600"><option value="json">JSON</option><option value="form">Form URL Encoded</option><option value="text">Text</option></Select>
                       </div>
                       <textarea id="service-test-body" aria-label="请求体" disabled={isRunning} value={bodyInput} onChange={e => setBodyInput(e.target.value)} spellCheck={false} placeholder={bodyFormat === 'json' ? '{\n  "message": "hello"\n}' : bodyFormat === 'form' ? 'message=hello\npage=1' : '填写请求正文'} className="flex-1 min-h-40 w-full resize-none p-3 rounded-lg border border-slate-200 bg-slate-50/50 font-mono text-xs leading-6 text-slate-700 placeholder:text-slate-300 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10" />
                       <p className="text-[11px] text-slate-400">{bodyFormat === 'json' ? '发送前校验 JSON 格式。' : bodyFormat === 'form' ? '每行填写 key=value，发送时自动编码。' : '按原始文本发送正文。'}</p>

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, test } from 'node:test';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
-import { URL, pathToFileURL } from 'node:url';
+import { URL, pathToFileURL, fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
 const directory = await mkdtemp(new URL('../node_modules/.service-api-test-', import.meta.url));
@@ -9,7 +9,7 @@ const { Response, TextEncoder } = globalThis;
 const originalFetch = globalThis.fetch;
 after(async () => { globalThis.fetch = originalFetch; await rm(directory, { recursive: true, force: true }); });
 const compiled = await build({
-  entryPoints: [new URL('../src/services/api.ts', import.meta.url).pathname], bundle: true, format: 'esm', platform: 'node', write: false,
+  entryPoints: [fileURLToPath(new URL('../src/services/api.ts', import.meta.url))], bundle: true, format: 'esm', platform: 'node', write: false,
   plugins: [{ name: 'auth-boundary', setup(builder) {
     builder.onResolve({ filter: /^(\.\/firebase|firebase\/auth)$/ }, args => ({ path: args.path, namespace: 'test' }));
     builder.onLoad({ filter: /.*/, namespace: 'test' }, args => ({ contents: args.path === './firebase' ? 'export const auth = {};' : 'export class GoogleAuthProvider {} export async function signInWithPopup() {} export async function signOut() {}' }));

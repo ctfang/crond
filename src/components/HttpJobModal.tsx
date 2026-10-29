@@ -1,3 +1,5 @@
+import Select from './Select';
+import { confirmAction } from './Feedback';
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { X, Clock, CheckCircle2, Trash2, Globe, Terminal as TerminalIcon, Plus } from 'lucide-react';
@@ -213,11 +215,11 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
                  />
               </div>
            <label className="text-xs text-slate-400">调度状态
-             <select aria-label="调度状态" value={formData.status || 'active'}
+             <Select dark aria-label="调度状态" value={formData.status || 'active'}
                onChange={e => setFormData(prev => ({ ...prev, status: e.target.value as Job['status'] }))}
-               className="block mt-2 bg-slate-900 border border-slate-600 rounded px-3 py-2 text-slate-200">
+               className="flex mt-2 bg-slate-900 border border-slate-600 rounded px-3 py-2 text-slate-200">
                <option value="active">启用</option><option value="inactive">停用（仅手动运行）</option>
-             </select>
+             </Select>
            </label>
               <div>
                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">Cron 表达式</label>
@@ -266,7 +268,7 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
                   <div className="grid grid-cols-6 gap-4">
                      <div className="col-span-2">
                         <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">请求方式</label>
-                        <select 
+                        <Select dark aria-label="请求方式"
                           className="w-full bg-[#151515] border border-[#3c3c3c] text-indigo-400 text-xs rounded-lg px-3 py-2 outline-none focus:border-indigo-500 font-mono"
                           value={method}
                           onChange={e => setMethod(e.target.value)}
@@ -276,7 +278,7 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
                           <option value="PUT">PUT</option>
                           <option value="DELETE">DELETE</option>
                           <option value="PATCH">PATCH</option>
-                        </select>
+                        </Select>
                      </div>
                      <div className="col-span-4">
                         <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">目标链接 (URL)</label>
@@ -481,7 +483,7 @@ export default function HttpJobModal({ projectId, job, onClose, onSaved }: HttpJ
               {job?.id && (
                 <button 
                   onClick={async () => {
-                     if (confirm('确认删除此定时任务吗？')) {
+                     if (await confirmAction('确认删除此定时任务吗？')) {
                         try {
                            await api.deleteJob(job.id, projectId);
                            onSaved();

@@ -1,3 +1,5 @@
+import Select from './Select';
+import { confirmAction, notify } from './Feedback';
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Project, ProjectMember } from '../types';
@@ -45,12 +47,12 @@ export default function ProjectMembersModal({ project, onClose }: Props) {
   };
 
   const handleRemoveMember = async (memberId: string) => {
-    if (!confirm('确认移除此成员？')) return;
+    if (!await confirmAction('确认移除此成员？')) return;
     try {
       await api.removeMember(project.id, memberId);
       fetchMembers();
     } catch (err: any) {
-      alert('移除失败: ' + err.message);
+      notify('移除失败: ' + err.message);
     }
   };
 
@@ -86,14 +88,14 @@ export default function ProjectMembersModal({ project, onClose }: Props) {
                 />
               </div>
               <div className="flex space-x-2">
-                <select 
+                <Select aria-label="成员角色"
                   value={role}
                   onChange={(e) => setRole(e.target.value as any)}
                   className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none"
                 >
                   <option value="editor">编辑器 (Editor)</option>
                   <option value="viewer">查看者 (Viewer)</option>
-                </select>
+                </Select>
                 <button
                   type="submit"
                   disabled={loading}

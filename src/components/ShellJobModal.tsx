@@ -1,3 +1,5 @@
+import Select from './Select';
+import { confirmAction } from './Feedback';
 import React, { useState } from 'react';
 import { api } from '../services/api';
 import Editor from '@monaco-editor/react';
@@ -83,7 +85,7 @@ export default function ShellJobModal({ projectId, job, onClose, onSaved }: Shel
              {job?.id && (
                <button 
                   onClick={async () => {
-                     if (confirm('确认删除此定时任务？')) {
+                     if (await confirmAction('确认删除此定时任务？')) {
                         try {
                            await api.deleteJob(job.id, projectId);
                            onSaved();
@@ -118,11 +120,11 @@ export default function ShellJobModal({ projectId, job, onClose, onSaved }: Shel
               />
            </div>
            <label className="text-xs text-slate-400">调度状态
-             <select aria-label="调度状态" value={formData.status || 'active'}
+             <Select dark aria-label="调度状态" value={formData.status || 'active'}
                onChange={e => setFormData(prev => ({ ...prev, status: e.target.value as Job['status'] }))}
-               className="block mt-2 bg-slate-900 border border-slate-600 rounded px-3 py-2 text-slate-200">
+               className="flex mt-2 bg-slate-900 border border-slate-600 rounded px-3 py-2 text-slate-200">
                <option value="active">启用</option><option value="inactive">停用（仅手动运行）</option>
-             </select>
+             </Select>
            </label>
            <div className="w-48">
               <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest font-sans">Cron 表达式</label>

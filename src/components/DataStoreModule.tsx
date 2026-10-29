@@ -1,3 +1,4 @@
+import { confirmAction, notify } from './Feedback';
 import React, { useState, useEffect } from 'react';
 import { 
   Database, Plus, Trash2, Edit, Search, Info, Code, FileJson, Table2, 
@@ -115,7 +116,7 @@ export default function DataStoreModule({ projectId }: Props) {
 
   // Delete Collection
   const handleDeleteCollection = async (col: DataCollection) => {
-    const confirmation = window.confirm(`警告：您确认要删除集合【${col.displayName}】吗？这会清空集合内的全部文档且不可恢复。`);
+    const confirmation = await confirmAction(`警告：您确认要删除集合【${col.displayName}】吗？这会清空集合内的全部文档且不可恢复。`);
     if (!confirmation) return;
 
     try {
@@ -123,7 +124,7 @@ export default function DataStoreModule({ projectId }: Props) {
       setCollections(prev => prev.filter(c => c.id !== col.id));
       if (selectedCollection?.id === col.id) setSelectedCollection(null);
     } catch (err) {
-      alert('删除失败');
+      notify('删除失败');
     }
   };
 
@@ -181,14 +182,14 @@ export default function DataStoreModule({ projectId }: Props) {
   // Delete Record
   const handleDeleteRecord = async (recordId: string) => {
     if (!selectedCollection) return;
-    const confirmation = window.confirm('您确定要永久删除本条数据记录吗？');
+    const confirmation = await confirmAction('您确定要永久删除本条数据记录吗？');
     if (!confirmation) return;
 
     try {
       await api.deleteDataRecord(projectId, selectedCollection.id, recordId);
       setRecords(prev => prev.filter(r => r.id !== recordId));
     } catch (err) {
-      alert('删除失败');
+      notify('删除失败');
     }
   };
 
@@ -415,9 +416,13 @@ export default function DataStoreModule({ projectId }: Props) {
                                 <div className="h-3 w-px bg-slate-200 mx-1" />
                                 
                                 <button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(formattedJson);
-                                    alert('已将文档 JSON 拷贝至剪贴板');
+                                  onClick={async () => {
+                                    try {
+                                      await navigator.clipboard.writeText(formattedJson);
+                                      notify('已将文档 JSON 拷贝至剪贴板');
+                                    } catch {
+                                      notify('复制失败，请重试');
+                                    }
                                   }}
                                   className="text-xs text-indigo-650 hover:text-indigo-800 bg-white hover:bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 transition-all font-bold"
                                   title="复制 JSON 数据"

@@ -31,14 +31,15 @@ func RunWorker(args []string) (code int) {
 	}
 	p := parser.NewParser()
 	vm := runtime.NewVM(p).(*runtime.VM)
+	// Origami constants are immutable; register the wrapper before PHP defaults.
+	if binary := os.Getenv("CROND_PHP_BINARY"); binary != "" {
+		vm.SetConstant("PHP_BINARY", data.NewStringValue(binary))
+	}
 	std.Load(vm)
 	php.Load(vm)
 	origamihttp.Load(vm)
 	loadScriptHTTP(vm)
 	system.Load(vm)
-	if binary := os.Getenv("CROND_PHP_BINARY"); binary != "" {
-		vm.SetConstant("PHP_BINARY", data.NewStringValue(binary))
-	}
 	if len(args) == 2 && args[1] != "" {
 		if _, control := vm.LoadAndRun(args[1]); control != nil {
 			return report(control)

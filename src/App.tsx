@@ -1,3 +1,5 @@
+import Select from './components/Select';
+import { confirmAction, notify } from './components/Feedback';
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from './services/api';
 import { Job, Project, JobType } from './types';
@@ -96,7 +98,7 @@ export default function App() {
 
   const deleteProject = async (id: string, e: React.MouseEvent) => {
      e.stopPropagation();
-     if (!confirm('确认删除此项目及其下所有任务？(Confirm deleting this project and its tasks?)')) return;
+     if (!await confirmAction('确认删除此项目及其下所有任务？(Confirm deleting this project and its tasks?)')) return;
      try {
         setErrorMsg('');
         await api.deleteProject(id);
@@ -144,7 +146,7 @@ export default function App() {
 
   const handleDelete = async (id: string) => {
     if (!selectedProjectId) return;
-    if (confirm('确认删除此任务？')) {
+    if (await confirmAction('确认删除此任务？')) {
       try {
         await api.deleteJob(id, selectedProjectId);
         fetchJobs(selectedProjectId);
@@ -156,9 +158,9 @@ export default function App() {
     if (!selectedProjectId) return;
     try {
         const result = await api.runJob(id, selectedProjectId);
-        alert(result.status === 'success' ? '执行成功，可查看任务日志' : '执行失败：' + result.output);
+        notify(result.status === 'success' ? '执行成功，可查看任务日志' : '执行失败：' + result.output);
     } catch (e: any) {
-        alert(e.message || '执行失败');
+        notify(e.message || '执行失败');
     }
   };
 
@@ -172,7 +174,7 @@ export default function App() {
 
   const handleOpenJobModal = (job: Job | null = null) => {
     if (!selectedProjectId) {
-       alert("请先选择或创建一个项目 (Please select or create a project first)");
+       notify("请先选择或创建一个项目 (Please select or create a project first)");
        return;
     }
 
@@ -378,12 +380,12 @@ export default function App() {
       <main className="flex-1 flex flex-col overflow-hidden relative">
         <div className="h-14 px-4 bg-white border-b border-slate-200 flex items-center gap-2 shrink-0 overflow-x-auto scrollbar-hide">
           <label className="shrink-0 text-xs text-slate-500 flex items-center gap-2">当前项目
-            <select aria-label="当前项目" value={selectedProjectId || ''}
+            <Select aria-label="当前项目" value={selectedProjectId || ''}
               onChange={e => { setSelectedProjectId(e.target.value || null); setShowLogsModal(false); setShowMembersModal(false); setShowJobModal(false); }}
               className="h-8 border border-slate-200 rounded-md px-2 min-w-32 max-w-44 bg-white text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
               {!projects.length && <option value="">暂无项目</option>}
               {projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}
-            </select>
+            </Select>
           </label>
           <button onClick={() => setShowProjectModal(true)} title="新建项目" aria-label="新建项目" className="h-8 px-2.5 shrink-0 inline-flex items-center gap-1.5 text-xs text-indigo-600 rounded-md hover:bg-indigo-50"><Plus className="w-3.5 h-3.5" />新建</button>
           <button disabled={!selectedProjectId} onClick={() => setEditingProject(projects.find(p => p.id === selectedProjectId) || null)} title="编辑项目" aria-label="编辑项目" className="h-8 px-2.5 shrink-0 inline-flex items-center gap-1.5 text-xs text-slate-600 rounded-md hover:bg-slate-100 disabled:opacity-50"><Edit className="w-3.5 h-3.5" />编辑</button>
